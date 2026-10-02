@@ -43,6 +43,7 @@ juce_add_plugin(MiniBloberto
     PLUGIN_CODE Mblb
     FORMATS ${MB_FORMATS}
     PRODUCT_NAME "Mini Bloberto"
+    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon_1024.png"   # his face, 80 px grid at 12x
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
