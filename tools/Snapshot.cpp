@@ -1,0 +1,102 @@
+// Offline harness for Mini Bloberto. No DAW needed.
+//   MiniBlobertoSnapshot --selftest
+//       pass-through null test: audio out must equal audio in exactly
+//   MiniBlobertoSnapshot --png out.png [--ppq 3.25] [--stopped] [--set id=index ...]
+//       the plugin window at that beat position (ids: mode moves pick speed bars colour)
+//   MiniBlobertoSnapshot --strip out.png [--set ...]
+//       one frame per 16th across 2 beats, side by side
+#include <juce_audio_utils/juce_audio_utils.h>
+#include "../Source/PluginProcessor.h"
+#include "../Source/PluginEditor.h"
+
+static void apply (MiniBlobertoProcessor& p, const juce::StringArray& args)
+{
+    for (int i = 0; i < args.size(); ++i)
+        if (args[i] == "--set" && i + 1 < args.size())
+        {
+            auto id = args[i + 1].upToFirstOccurrenceOf ("=", false, false);
+            auto v = args[i + 1].fromFirstOccurrenceOf ("=", false, false).getIntValue();
+            if (auto* prm = dynamic_cast<juce::AudioParameterChoice*> (p.params.getParameter (id)))
+                *prm = v;
+            else
+                std::printf ("unknown parameter %s\n", id.toRawUTF8());
+        }
+}
+
+static bool save (const juce::Image& img, const juce::String& path)
+{
+    juce::File f (juce::File::getCurrentWorkingDirectory().getChildFile (path));
+    f.deleteFile();
+    juce::FileOutputStream out (f);
+    juce::PNGImageFormat png;
+    return out.openedOk() && png.writeImageToStream (img, out);
+}
+
+int main (int argc, char** argv)
+{
+    juce::ScopedJuceInitialiser_GUI gui;
+    juce::StringArray args;
+    for (int i = 1; i < argc; ++i)
+        args.add (argv[i]);
+
+    MiniBlobertoProcessor proc;
+    proc.setPlayConfigDetails (2, 2, 48000.0, 512);
+    proc.prepareToPlay (48000.0, 512);
+    apply (proc, args);
+
+    if (args.contains ("--selftest"))
+    {
+        juce::Random r (42);
+        juce::AudioBuffer<float> buf (2, 512), ref (2, 512);
+        juce::MidiBuffer midi;
+        double worst = 0.0;
+        for (int block = 0; block < 200; ++block)
+        {
+            for (int ch = 0; ch < 2; ++ch)
+                for (int i = 0; i < 512; ++i)
+                    buf.setSample (ch, i, r.nextFloat() * 2.0f - 1.0f);
+            ref.makeCopyOf (buf);
+            proc.processBlock (buf, midi);
+            for (int ch = 0; ch < 2; ++ch)
+                for (int i = 0; i < 512; ++i)
+                    worst = juce::jmax (worst, (double) std::abs (buf.getSample (ch, i) - ref.getSample (ch, i)));
+        }
+        std::printf ("pass-through null test: max difference %g (%s)\n", worst, worst == 0.0 ? "PASS" : "FAIL");
+        return worst == 0.0 ? 0 : 1;
+    }
+
+    const bool playing = ! args.contains ("--stopped");
+    const auto ppqIdx = args.indexOf ("--ppq");
+    const double ppq = ppqIdx >= 0 ? args[ppqIdx + 1].getDoubleValue() : 0.0;
+
+    std::unique_ptr<MiniBlobertoEditor> ed (dynamic_cast<MiniBlobertoEditor*> (proc.createEditor()));
+
+    const auto stripIdx = args.indexOf ("--strip");
+    if (stripIdx >= 0)
+    {
+        const int n = 8;
+        juce::Image strip (juce::Image::ARGB, 330 * n, 384, true);
+        juce::Graphics g (strip);
+        for (int k = 0; k < n; ++k)
+        {
+            proc.setFakeTransport (true, ppq + k * 0.25, 120.0);
+            ed->advance (0.0);
+            auto shot = ed->createComponentSnapshot (ed->getLocalBounds());
+            g.drawImageAt (shot.getClippedImage ({ 232, 12, 330, 384 }), k * 330, 0);
+            auto c = ed->currentCell();
+            std::printf ("ppq %.2f -> %s frame %d\n", ppq + k * 0.25, mb::rowNames[c.row].toRawUTF8(), c.frame);
+        }
+        return save (strip, args[stripIdx + 1]) ? 0 : 1;
+    }
+
+    proc.setFakeTransport (playing, ppq, 120.0);
+    ed->advance (0.0);
+    auto c = ed->currentCell();
+    std::printf ("%s at ppq %.2f -> %s frame %d\n", playing ? "playing" : "stopped", ppq,
+                 mb::rowNames[c.row].toRawUTF8(), c.frame);
+
+    const auto pngIdx = args.indexOf ("--png");
+    if (pngIdx >= 0)
+        return save (ed->createComponentSnapshot (ed->getLocalBounds()), args[pngIdx + 1]) ? 0 : 1;
+    return 0;
+}
