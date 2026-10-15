@@ -2,9 +2,11 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Brain.h"
+#include "BeatTracker.h"
 
 // Audio passes straight through. The processor only watches: the host transport
-// (so he dances on the grid) and the input peak (so Input mode can follow the track).
+// (so he dances on the grid), the input peak (so Input mode can follow the track), and a beat
+// tracker on the input, which is his clock when there is no playing transport (OBS).
 class MiniBlobertoProcessor : public juce::AudioProcessor
 {
 public:
@@ -50,6 +52,7 @@ public:
 
     // headless harness / Standalone without a host clock
     void setFakeTransport (bool playing, double ppq, double bpm);
+    const BeatTracker& tracker() const { return beats; }
 
 private:
     std::atomic<bool> playing { false };
@@ -57,6 +60,8 @@ private:
     std::atomic<double> blockTimeMs { 0.0 };
     std::atomic<int> num { 4 }, den { 4 };
     std::atomic<float> peakSinceRead { 0.0f };
+    BeatTracker beats;
+    std::vector<float> mono;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MiniBlobertoProcessor)
 };

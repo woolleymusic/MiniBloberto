@@ -16,7 +16,8 @@ Shake (whole pixels, harder when loud), Trails (last two frames as ghosts), Refl
 Rainbow (palette hue step per beat, face keeps its colours).
 Frames lock to the host's bar grid via the playhead PPQ. Input follows the track's peak:
 still when quiet, bigger moves when loud. Hold the mouse on him and he dangles.
-Transport stopped: a gentle idle bop.
+No playing transport (OBS, or the DAW stopped): a beat tracker on the input is his clock
+and he dances on the beats he hears. Silence: a gentle idle bop.
 
 Sprites: `resources/Bloberto_<Colour>.png`, 8 frames x 18 rows of 110x128 native pixels,
 drawn at 3x with nearest-neighbour. Regenerate with `python3 ~/llm/mini-bloberto/sprite.py --plugin resources`.

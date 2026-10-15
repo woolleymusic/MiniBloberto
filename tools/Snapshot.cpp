@@ -4,6 +4,9 @@
 //   MiniBlobertoSnapshot --png out.png [--ppq 3.25] [--stopped] [--set id=index ...]
 //       the plugin window at that beat position (ids: mode moves pick speed bars colour flip
 //       size backdrop, and 0/1 for reverse shake trails reflect rainbow). --dancer: just him
+//   MiniBlobertoSnapshot --wav song.wav [--seconds N] [--set ...]
+//       no host clock (like OBS): feeds the song through the plugin and prints, every 5 s,
+//       the tempo it hears, the beats it found and the moves he danced
 //   MiniBlobertoSnapshot --strip out.png [--set ...]
 //       one frame per 16th across 2 beats, side by side
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -64,6 +67,62 @@ int main (int argc, char** argv)
         }
         std::printf ("pass-through null test: max difference %g (%s)\n", worst, worst == 0.0 ? "PASS" : "FAIL");
         return worst == 0.0 ? 0 : 1;
+    }
+
+    const auto wavIdx = args.indexOf ("--wav");
+    if (wavIdx >= 0)
+    {
+        juce::AudioFormatManager fm;
+        fm.registerBasicFormats();
+        std::unique_ptr<juce::AudioFormatReader> r (fm.createReaderFor (juce::File (args[wavIdx + 1])));
+        if (r == nullptr)
+        {
+            std::printf ("cannot read %s\n", args[wavIdx + 1].toRawUTF8());
+            return 1;
+        }
+        const double sr = r->sampleRate;
+        proc.prepareToPlay (sr, 512);
+        std::unique_ptr<MiniBlobertoEditor> ed (dynamic_cast<MiniBlobertoEditor*> (proc.createEditor()));
+        const auto secIdx = args.indexOf ("--seconds");
+        const auto len = juce::jmin ((juce::int64) ((secIdx >= 0 ? args[secIdx + 1].getDoubleValue() : 60.0) * sr),
+                                     r->lengthInSamples);
+        juce::AudioBuffer<float> buf (2, 512);
+        juce::MidiBuffer midi;
+        double lastBeat = 0.0, next = 5.0, uiClock = 0.0;
+        juce::String beatTimes;
+        juce::StringArray moves;
+        int frameChanges = 0, lastFrame = -1;
+        for (juce::int64 pos = 0; pos < len; pos += 512)
+        {
+            const int n = (int) juce::jmin ((juce::int64) 512, len - pos);
+            buf.clear();
+            r->read (&buf, 0, n, pos, true, true);
+            proc.processBlock (buf, midi);
+            const double t = (double) (pos + n) / sr;
+            const double b = proc.tracker().beatsAtLastHop();
+            if (proc.tracker().active() && std::floor (b) > std::floor (lastBeat))
+                beatTimes << juce::String (t, 2) << " ";
+            lastBeat = b;
+            while (uiClock < t)   // the editor's 30 fps timer, in song time
+            {
+                uiClock += 1.0 / 30.0;
+                ed->advance (1.0 / 30.0);
+                auto c = ed->currentCell();
+                if (c.frame != lastFrame) { ++frameChanges; lastFrame = c.frame; }
+                moves.addIfNotAlreadyThere (mb::rowNames[c.row]);
+            }
+            if (t >= next)
+            {
+                std::printf ("t=%5.1fs bpm=%6.1f active=%d frames=%d moves=%s\n  beats: %s\n", t,
+                             proc.tracker().bpm(), (int) proc.tracker().active(), frameChanges,
+                             moves.joinIntoString (",").toRawUTF8(), beatTimes.toRawUTF8());
+                beatTimes.clear();
+                moves.clear();
+                frameChanges = 0;
+                next += 5.0;
+            }
+        }
+        return 0;
     }
 
     const bool playing = ! args.contains ("--stopped");

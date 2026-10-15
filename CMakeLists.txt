@@ -25,6 +25,7 @@ else()
 endif()
 
 set(MB_SOURCES
+    Source/BeatTracker.cpp
     Source/Brain.cpp
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp)
@@ -64,6 +65,7 @@ target_link_libraries(MiniBloberto
     PRIVATE
         MiniBlobertoArt
         juce::juce_audio_utils
+        juce::juce_dsp
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
@@ -81,6 +83,7 @@ target_link_libraries(MiniBlobertoSnapshot
     PRIVATE
         MiniBlobertoArt
         juce::juce_audio_utils
+        juce::juce_dsp
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)

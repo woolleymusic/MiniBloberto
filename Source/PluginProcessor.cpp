@@ -37,7 +37,11 @@ MiniBlobertoProcessor::MiniBlobertoProcessor()
 {
 }
 
-void MiniBlobertoProcessor::prepareToPlay (double, int) {}
+void MiniBlobertoProcessor::prepareToPlay (double sampleRate, int maxBlock)
+{
+    beats.prepare (sampleRate);
+    mono.assign ((size_t) juce::jmax (512, maxBlock), 0.0f);
+}
 
 bool MiniBlobertoProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
@@ -60,6 +64,22 @@ void MiniBlobertoProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
         pk = juce::jmax (pk, buffer.getMagnitude (ch, 0, buffer.getNumSamples()));
     auto prev = peakSinceRead.load();
     while (pk > prev && ! peakSinceRead.compare_exchange_weak (prev, pk)) {}
+
+    // mono copy for the beat tracker (in chunks, in case a host sends more than it promised)
+    const int nIn = getTotalNumInputChannels();
+    if (nIn > 0 && ! mono.empty())
+        for (int start = 0; start < buffer.getNumSamples(); start += (int) mono.size())
+        {
+            const int n = juce::jmin ((int) mono.size(), buffer.getNumSamples() - start);
+            for (int i = 0; i < n; ++i)
+            {
+                float s = 0.0f;
+                for (int ch = 0; ch < nIn; ++ch)
+                    s += buffer.getSample (ch, start + i);
+                mono[(size_t) i] = s / (float) nIn;
+            }
+            beats.push (mono.data(), n);
+        }
 
     if (auto* ph = getPlayHead())
     {
@@ -91,6 +111,13 @@ void MiniBlobertoProcessor::setFakeTransport (bool isPlaying, double ppq, double
 mb::Transport MiniBlobertoProcessor::transportNow() const
 {
     mb::Transport t;
+    if (! playing.load() && beats.active())
+    {
+        // no clock (OBS, or the DAW stopped while audio comes in): dance to what he hears
+        t.playing = true;
+        t.ppq = beats.beats();
+        return t;
+    }
     t.playing = playing.load();
     t.num = num.load();
     t.den = den.load();
