@@ -34,6 +34,13 @@ public:
 
     mb::Settings settings() const;
     int colour() const { return (int) params.getRawParameterValue ("colour")->load(); }
+    int choice (const char* id) const { return (int) params.getRawParameterValue (id)->load(); }
+    bool flag (const char* id) const { return params.getRawParameterValue (id)->load() > 0.5f; }
+
+    // Fruity Dance style: after "Let him dance" the window is just him. Saved with the
+    // session, so a reopened project (or OBS scene) comes back as just him.
+    bool dancerView() const;
+    void setDancerView (bool);
 
     // transport as of now, extrapolated from the last block on the message thread
     mb::Transport transportNow() const;

@@ -7,11 +7,15 @@ namespace
 const int stepsPerQuarter[] { 2, 4, 8 };   // 8n 16n 32n
 const int barsPerMove[] { 1, 2, 4, 8 };
 
+// every dance, in the order Cycle walks them (Held is a pose, not a dance)
+const std::vector<int> allDances { Bop, Sway, Cheer, Kick, Jelly, Point, Spin, Wiggle, Jump,
+                                   Pump, Headbang, Robot, Twist, Flap, Shuffle, Wave, Moonwalk };
+
 // loudness tiers for Input mode: calm, groove, big
 const std::vector<int> pools[] {
-    { Bop, Sway, Wiggle },
-    { Sway, Kick, Point, Wiggle, Cheer, Bop },
-    { Jelly, Jump, Cheer, Kick, Point, Spin },
+    { Bop, Sway, Wiggle, Wave, Twist },
+    { Sway, Kick, Point, Wiggle, Cheer, Bop, Shuffle, Robot, Moonwalk, Flap },
+    { Jelly, Jump, Cheer, Kick, Spin, Headbang, Pump, Shuffle },
 };
 } // namespace
 
@@ -29,7 +33,12 @@ void Brain::choose (const Settings& s)
     if (s.moves == Pick)
         cur = s.pick;
     else if (s.moves == Random)
-        pickFrom ({ Bop, Sway, Cheer, Kick, Jelly, Point, Spin, Wiggle, Jump });
+        pickFrom (allDances);
+    else if (s.moves == Cycle)
+    {
+        auto it = std::find (allDances.begin(), allDances.end(), cur);
+        cur = (it == allDances.end() || it + 1 == allDances.end()) ? allDances.front() : *(it + 1);
+    }
     else
     {
         const auto rel = lvl / peak;
@@ -56,11 +65,26 @@ Cell Brain::tick (const Settings& s, const Transport& t, float level, double dt)
     if (s.mode == Still || isQuiet (s))
         return { standRow, 0 };
 
+    auto finish = [&s] (int row, juce::int64 step, double beats)
+    {
+        Cell c;
+        c.row = row;
+        c.step = step;
+        c.reverse = s.reverse;
+        const int f = (int) (((step % 8) + 8) % 8);
+        c.frame = s.reverse ? 7 - f : f;
+        if (s.flip == FlipBar)
+            c.flip = ((juce::int64) std::floor (beats / 4.0)) % 2 != 0;
+        else if (s.flip == FlipTwoBeats)
+            c.flip = ((juce::int64) std::floor (beats / 2.0)) % 2 != 0;
+        return c;
+    };
+
     if (! t.playing)
     {
         // transport stopped: a gentle bop at 4 frames a second so he still feels alive
         idleClock += dt;
-        return { standRow, (int) (idleClock * 4.0) % 8 };
+        return finish (standRow, (juce::int64) (idleClock * 4.0), idleClock * 2.0);
     }
 
     const double barQ = t.num * 4.0 / juce::jmax (1, t.den);
@@ -74,6 +98,6 @@ Cell Brain::tick (const Settings& s, const Transport& t, float level, double dt)
         cur = s.pick;
 
     const auto step = (juce::int64) std::floor (t.ppq * stepsPerQuarter[s.speed]);
-    return { cur, (int) (((step % 8) + 8) % 8) };
+    return finish (cur, step, t.ppq * 4.0 / barQ);
 }
 } // namespace mb

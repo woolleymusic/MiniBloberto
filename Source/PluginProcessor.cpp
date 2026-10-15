@@ -6,13 +6,25 @@ namespace
 juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
 {
     using C = juce::AudioParameterChoice;
+    using B = juce::AudioParameterBool;
     juce::AudioProcessorValueTreeState::ParameterLayout l;
     l.add (std::make_unique<C> (juce::ParameterID { "mode", 1 }, "Mode", juce::StringArray { "Still", "Dance" }, 1));
-    l.add (std::make_unique<C> (juce::ParameterID { "moves", 1 }, "Moves", juce::StringArray { "Pick", "Random", "Input" }, 1));
+    l.add (std::make_unique<C> (juce::ParameterID { "moves", 1 }, "Moves", juce::StringArray { "Pick", "Random", "Input", "Cycle" }, 1));
     l.add (std::make_unique<C> (juce::ParameterID { "pick", 1 }, "Pick", mb::rowNames, 0));
     l.add (std::make_unique<C> (juce::ParameterID { "speed", 1 }, "Speed", juce::StringArray { "8n", "16n", "32n" }, 1));
     l.add (std::make_unique<C> (juce::ParameterID { "bars", 1 }, "Bars", juce::StringArray { "1", "2", "4", "8" }, 1));
     l.add (std::make_unique<C> (juce::ParameterID { "colour", 1 }, "Colour", mb::colourNames, 0));
+
+    // v2: the window and the tricks (FAOSDance's extensions, kept on the pixel grid)
+    l.add (std::make_unique<C> (juce::ParameterID { "size", 2 }, "Size", juce::StringArray { "2x", "3x", "4x" }, 1));
+    l.add (std::make_unique<C> (juce::ParameterID { "backdrop", 2 }, "Backdrop",
+                                juce::StringArray { "Dark", "Green", "Magenta", "Blue" }, 0));
+    l.add (std::make_unique<C> (juce::ParameterID { "flip", 2 }, "Flip", juce::StringArray { "Off", "Each bar", "2 beats" }, 0));
+    l.add (std::make_unique<B> (juce::ParameterID { "reverse", 2 }, "Reverse", false));
+    l.add (std::make_unique<B> (juce::ParameterID { "shake", 2 }, "Shake", false));
+    l.add (std::make_unique<B> (juce::ParameterID { "trails", 2 }, "Trails", false));
+    l.add (std::make_unique<B> (juce::ParameterID { "reflect", 2 }, "Reflection", false));
+    l.add (std::make_unique<B> (juce::ParameterID { "rainbow", 2 }, "Rainbow", false));
     return l;
 }
 } // namespace
@@ -102,6 +114,8 @@ mb::Settings MiniBlobertoProcessor::settings() const
     s.pick = v ("pick");
     s.speed = v ("speed");
     s.bars = v ("bars");
+    s.flip = v ("flip");
+    s.reverse = v ("reverse") != 0;
     return s;
 }
 
@@ -116,6 +130,16 @@ void MiniBlobertoProcessor::setStateInformation (const void* data, int size)
     if (auto xml = getXmlFromBinary (data, size))
         if (xml->hasTagName (params.state.getType()))
             params.replaceState (juce::ValueTree::fromXml (*xml));
+}
+
+bool MiniBlobertoProcessor::dancerView() const
+{
+    return (bool) params.state.getProperty ("dancerView", false);
+}
+
+void MiniBlobertoProcessor::setDancerView (bool on)
+{
+    params.state.setProperty ("dancerView", on, nullptr);
 }
 
 juce::AudioProcessorEditor* MiniBlobertoProcessor::createEditor()

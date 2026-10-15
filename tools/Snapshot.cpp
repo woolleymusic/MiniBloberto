@@ -2,7 +2,8 @@
 //   MiniBlobertoSnapshot --selftest
 //       pass-through null test: audio out must equal audio in exactly
 //   MiniBlobertoSnapshot --png out.png [--ppq 3.25] [--stopped] [--set id=index ...]
-//       the plugin window at that beat position (ids: mode moves pick speed bars colour)
+//       the plugin window at that beat position (ids: mode moves pick speed bars colour flip
+//       size backdrop, and 0/1 for reverse shake trails reflect rainbow). --dancer: just him
 //   MiniBlobertoSnapshot --strip out.png [--set ...]
 //       one frame per 16th across 2 beats, side by side
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -16,8 +17,8 @@ static void apply (MiniBlobertoProcessor& p, const juce::StringArray& args)
         {
             auto id = args[i + 1].upToFirstOccurrenceOf ("=", false, false);
             auto v = args[i + 1].fromFirstOccurrenceOf ("=", false, false).getIntValue();
-            if (auto* prm = dynamic_cast<juce::AudioParameterChoice*> (p.params.getParameter (id)))
-                *prm = v;
+            if (auto* prm = p.params.getParameter (id))
+                prm->setValueNotifyingHost (prm->convertTo0to1 ((float) v));
             else
                 std::printf ("unknown parameter %s\n", id.toRawUTF8());
         }
@@ -70,19 +71,25 @@ int main (int argc, char** argv)
     const double ppq = ppqIdx >= 0 ? args[ppqIdx + 1].getDoubleValue() : 0.0;
 
     std::unique_ptr<MiniBlobertoEditor> ed (dynamic_cast<MiniBlobertoEditor*> (proc.createEditor()));
+    ed->showDancer (args.contains ("--dancer"));
 
     const auto stripIdx = args.indexOf ("--strip");
     if (stripIdx >= 0)
     {
         const int n = 8;
-        juce::Image strip (juce::Image::ARGB, 330 * n, 384, true);
+        proc.setFakeTransport (true, ppq, 120.0);
+        ed->advance (0.0);
+        const int cw = 330, ch = ed->composeNative().getHeight() * 3;
+        juce::Image strip (juce::Image::ARGB, cw * n, ch, true);
         juce::Graphics g (strip);
+        g.fillAll (juce::Colour (0xff1f1f26));
+        g.setImageResamplingQuality (juce::Graphics::lowResamplingQuality);
         for (int k = 0; k < n; ++k)
         {
             proc.setFakeTransport (true, ppq + k * 0.25, 120.0);
             ed->advance (0.0);
-            auto shot = ed->createComponentSnapshot (ed->getLocalBounds());
-            g.drawImageAt (shot.getClippedImage ({ 232, 12, 330, 384 }), k * 330, 0);
+            auto him = ed->composeNative();
+            g.drawImage (him, k * cw, 0, cw, ch, 0, 0, him.getWidth(), him.getHeight());
             auto c = ed->currentCell();
             std::printf ("ppq %.2f -> %s frame %d\n", ppq + k * 0.25, mb::rowNames[c.row].toRawUTF8(), c.frame);
         }
