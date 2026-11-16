@@ -78,7 +78,7 @@ Click him: settings come back. Hold him: he dangles.
 
 ## Install
 
-**Mac** (macOS 11 or newer, Apple Silicon)
+**Mac** (macOS 11 or newer, Apple Silicon and Intel)
 
 Download `MiniBloberto-1.0.0-mac.pkg` from the
 [Releases page](https://github.com/woolleymusic/MiniBloberto/releases) and open it.
@@ -114,7 +114,7 @@ tools/install.sh   # copies the AU and VST3 into ~/Library/Audio/Plug-Ins (quit 
 ```
 
 JUCE somewhere else? Add `-DJUCE_DIR=/path/to/install/lib/cmake/JUCE-9.0.2`.
-For Intel Macs too, add `-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"`.
+The Mac build is universal (Apple Silicon and Intel) by default.
 
 **Windows:** see [WINDOWS_BUILD.md](WINDOWS_BUILD.md). It needs MSVC (Visual Studio 2022
 Build Tools). JUCE 9 doesn't support MinGW.
@@ -148,3 +148,8 @@ The beat tracker runs on the audio thread without allocating. The audio is never
 He started as a Max for Live device and was ported to JUCE so he works everywhere.
 
 Made by Woolley.
+
+## Licence
+
+The code is GPL version 3 (`LICENSE`). The Mini Bloberto character and his
+sprite art are all rights reserved (`ART-LICENCE.md`). Built with JUCE.

@@ -101,7 +101,7 @@ Click him: settings come back. Hold him: he dangles.
 
 ## Install
 
-**Mac** (macOS 11 or newer, Apple Silicon)
+**Mac** (macOS 11 or newer, Apple Silicon and Intel)
 
 Download `MiniBloberto-1.0.0-mac.pkg` from the
 [Releases page](https://github.com/woolleymusic/MiniBloberto/releases) and open it.
@@ -137,7 +137,7 @@ tools/install.sh   # copies the AU and VST3 into ~/Library/Audio/Plug-Ins (quit 
 ```
 
 JUCE somewhere else? Add `-DJUCE_DIR=/path/to/install/lib/cmake/JUCE-9.0.2`.
-For Intel Macs too, add `-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"`.
+The Mac build is universal (Apple Silicon and Intel) by default.
 
 **Windows:** see [WINDOWS_BUILD.md](../WINDOWS_BUILD.md). It needs MSVC (Visual Studio 2022
 Build Tools). JUCE 9 doesn't support MinGW.
@@ -201,7 +201,7 @@ stream and he dances to the music. Your audio goes straight through, untouched.
 
 **Downloads**
 
-- `MiniBloberto-1.0.0-mac.pkg`: Mac installer (macOS 11 or newer, Apple Silicon). Installs
+- `MiniBloberto-1.0.0-mac.pkg`: Mac installer (macOS 11 or newer, Apple Silicon and Intel). Installs
   the AU, the VST3 and the app. Signed and notarized.
 - `MiniBloberto-1.0.0-win64.zip`: Windows 64-bit. VST3 and the app. Copy
   `Mini Bloberto.vst3` into `C:\Program Files\Common Files\VST3\`. Not code-signed yet, so
