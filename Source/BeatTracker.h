@@ -3,7 +3,7 @@
 #include <juce_dsp/juce_dsp.h>
 
 // Real-time beat tracker for audio with no host clock (OBS, a DAW with the transport stopped).
-// Ported from ~/llm/bloberto-companion; here push() runs on the AUDIO thread, so nothing in
+// Ported from the Bloberto companion app; here push() runs on the AUDIO thread, so nothing in
 // it allocates: every buffer is sized in prepare().
 //
 //   onset strength: log-compressed spectral flux, 1024 FFT, hop 512

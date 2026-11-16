@@ -50,6 +50,8 @@ juce_add_plugin(MiniBloberto
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    MICROPHONE_PERMISSION_ENABLED TRUE   # Standalone: he listens to the input for the beat
+    MICROPHONE_PERMISSION_TEXT "Mini Bloberto listens to the audio input so he can dance to the beat. Nothing is recorded."
     COPY_PLUGIN_AFTER_BUILD FALSE   # install explicitly with tools/install.sh
     VST3_CATEGORIES Fx Tools
     AU_MAIN_TYPE kAudioUnitType_Effect)

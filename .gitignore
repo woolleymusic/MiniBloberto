@@ -1,4 +1,22 @@
+# Build output
 build/
 build-*/
+dist/
+*.pkg
+*.zip
+*.dmg
+
+# macOS and editors
 .DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Notarization logs and local secrets (never commit these)
+notary-*.json
+*.p12
+*.p8
+.env
+
+# Scratch screenshots in the repo root (docs/images is tracked)
 /*.png
